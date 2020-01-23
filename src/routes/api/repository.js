@@ -1,0 +1,335 @@
+'use strict';
+
+const express = require('express');
+const fs = require('fs');
+const httpError = require('http-errors');
+const rimraf = require('rimraf');
+const config = require('../../../src/config');
+const router = new express.Router();
+const serverError = require('../../services/serverError');
+const Repository = require('../../models/repository');
+
+/**
+ * @swagger
+ * /repository:
+ *  get:
+ *    tags:
+ *      - repository
+ *    description: List all repository
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: All repositorys serialized objects
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.get('/repository', async (req, res, next) => {
+    const repositories = await Repository.find();
+
+    res.status(200);
+    res.send(repositories.map(repository => repository.serialized()));
+});
+
+/**
+ * @swagger
+ * /repository:
+ *  post:
+ *    tags:
+ *      - repository
+ *    description: Create a repository
+ *    consumes:
+ *      - application/x-www-form-urlencoded
+ *    parameters:
+ *    - name: author
+ *      in: formData
+ *      required: true
+ *      type: string
+ *      description: The repository author
+ *    - name: repository
+ *      in: formData
+ *      required: true
+ *      type: string
+ *      description: The repository name
+ *    - name: domain
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      default: 'github.com'
+ *      description: The repository domain, defaults to 'github.com'
+ *    - name: connection
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      enum: ['ssl', 'https', 'http']
+ *      default: 'https'
+ *      description: The repository server connection, defaults to 'https'
+ *    - name: type
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      enum: ['git']
+ *      default: 'git'
+ *      description: The repository server type, defaults to 'git'
+ *    - name: branchTarget
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      default: 'master'
+ *      description: The repository branch target to build on, defaults to 'master'
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The repository serialized object
+ *      400:
+ *        description: Form data error(s)
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.post('/repository', async (req, res, next) => {
+    let errors = [];
+    let repository = req.body;
+    repository.domain = void 0 === req.body.domain ? config.githubPublicServer : req.body.domain;
+
+    // cancel if repository url has already been registered
+    if (0 < (await Repository.find({
+        author: repository.author,
+        repository: repository.repository,
+        domain: repository.domain
+    }))) {
+        errors.push('this repository has already been registered');
+    }
+
+    // cancel if there is at least an error
+    if (0 < errors.length) {
+        res.status(400);
+        res.send(errors);
+        throw httpError('400', 'form data error(s)');
+    }
+
+    // validate & write to database
+    repository = new Repository(repository);
+    await repository.validate();
+    await repository.save();
+
+    res.status(200);
+    res.send(repository.serialized());
+});
+
+/**
+ * @swagger
+ * /repository/{id}:
+ *  get:
+ *    tags:
+ *      - repository
+ *    description: Return a repository
+ *    parameters:
+ *    - name: id
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The repository id
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The repository serialized object
+ *      404:
+ *        description: Resource not found
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.get('/repository/:id', async (req, res, next) => {
+    const repository = await Repository.findOne({_id: req.params.id});
+
+    if (!repository) {
+        res.status(404);
+        res.send({
+            errors: ['Resource not found'],
+        });
+        throw httpError('404', 'Resource not found');
+    }
+
+    res.status(200);
+    res.send(repository.serialized());
+});
+
+/**
+ * @swagger
+ * /repository/{id}:
+ *  put:
+ *    tags:
+ *      - repository
+ *    description: Update a repository
+ *    consumes:
+ *      - application/x-www-form-urlencoded
+ *    parameters:
+ *    - name: id
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The repository id
+ *    - name: author
+ *      in: formData
+ *      required: true
+ *      type: string
+ *      description: The repository author
+ *    - name: repository
+ *      in: formData
+ *      required: true
+ *      type: string
+ *      description: The repository name
+ *    - name: domain
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      default: 'github.com'
+ *      description: The repository domain, defaults to 'github.com'
+ *    - name: connection
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      enum: ['ssl', 'https', 'http']
+ *      default: 'https'
+ *      description: The repository server connection, defaults to 'https'
+ *    - name: type
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      enum: ['git']
+ *      default: 'git'
+ *      description: The repository server type, defaults to 'git'
+ *    - name: branchTarget
+ *      in: formData
+ *      required: false
+ *      type: string
+ *      default: 'master'
+ *      description: The repository branch target to build on, defaults to 'master'
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The repository serialized object
+ *      400:
+ *        description: Form data error(s)
+ *      404:
+ *        description: Resource not found
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.put('/repository/:id', async (req, res, next) => {
+    let errors = [];
+    let repository = await Repository.findOne({_id: req.params.id});
+
+    if (!repository) {
+        res.status(404);
+        res.send({
+            errors: ['Resource not found'],
+        });
+        throw httpError('404', 'Resource not found');
+    }
+
+    // cancel if repository url has already been registered
+    const regex = new RegExp('/!'+req.params.id+'/i');
+    if (0 < (await Repository.find({
+        author: req.body.author,
+        repository: req.body.repository,
+        domain: req.body.domain,
+        id: {$regex: regex},
+    }))) {
+        errors.push('this repository has already been registered');
+    }
+
+    if (0 < errors.length) {
+        res.status(400);
+        res.send(errors);
+        throw httpError('400', 'form data error(s)');
+    }
+
+    // remove files if url has changed
+    try {
+        if (repository.author !== req.body.author && repository.repository !== req.body.repository && repository.domain !== req.body.domain) {
+            fs.accessSync(config.buildPath+repository.id, fs.constants.F_OK);
+            rimraf(config.buildPath+repository.id, (error) => {
+                if (error) serverError(res, error);
+            });
+        }
+    } catch (err) {
+        console.log(config.buildPath+repository.id+' does not exists or is not readable');
+        console.error(err);
+    }
+
+
+    // validate & write to database
+    Object.assign(repository, req.body);
+    await repository.validate();
+    repository.builds.remove();
+    await repository.save();
+
+    res.status(200);
+    res.send(repository.serialized());
+});
+
+/**
+ * @swagger
+ * /repository/{id}:
+ *  delete:
+ *    tags:
+ *      - repository
+ *    description: Delete a repository
+ *    parameters:
+ *    - name: id
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The repository id
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The repository serialized object
+ *      404:
+ *        description: Resource not found
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.delete('/repository/:id', async (req, res, next) => {
+    const repository = await Repository.findOne({_id: req.params.id});
+
+    if (!repository) {
+        res.status(404);
+        res.send({
+            errors: ['Resource not found'],
+        });
+        throw httpError('404', 'Resource not found');
+    }
+
+    // Remove repository directory
+    fs.stat(config.buildPath+repository.id, (err, stats) => {
+        if (err) serverError(res, err);
+        if (void 0 !== stats && stats.isDirectory()) {
+            rimraf(config.buildPath+repository.id, (error) => {
+                if (error) serverError(res, error);
+            });
+        }
+    });
+
+    repository.builds.remove();
+    await Repository.deleteOne({_id: repository.id });
+
+    res.status(200);
+    res.send(repository.serialized());
+});
+
+module.exports = router;

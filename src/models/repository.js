@@ -1,0 +1,75 @@
+'use strict';
+
+const mongoose = require('mongoose');
+const repositorySchema = new mongoose.Schema(
+    {
+        author: {
+            type: String,
+            required: true,
+        },
+        repository: {
+            type: String,
+            required: true,
+        },
+        domain: {
+            type: String,
+            required: true,
+            default: 'github.com'
+        },
+        connection: {
+            type: String,
+            required: true,
+            enum: ['https', 'http', 'ssl'],
+            default: 'https',
+        },
+        type: {
+            type: String,
+            required: true,
+            enum: ['git'],
+            default: 'git',
+        },
+        branchTarget: {
+            type: String,
+            required: true,
+            default: 'master'
+        },
+        builds: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Build',
+            },
+        ],
+    },
+    {
+        toJSON: { virtuals: true, getters: true, versionKey: false },
+        toObject: { virtuals: true, getters: true, versionKey: false },
+        timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
+    },
+);
+
+repositorySchema.virtual('url').get(function() {
+  if ('ssl' === this.connection) {
+      return 'git@'+this.domain+':'+this.author+'/'+this.repository+'.git';
+  }
+  return this.connection+'://'+this.domain+'/'+this.author+'/'+this.repository+'.git';
+});
+
+repositorySchema.methods.serialized = function serialized() {
+    const repository = this.toObject();
+
+    return {
+        id: repository.id,
+        author: repository.author,
+        repository: repository.repository,
+        domain: repository.domain,
+        connection: repository.connection,
+        url: repository.url,
+        type: repository.type,
+        branchTarget: repository.branchTarget,
+        builds: repository.builds,
+        createdAt: repository.createdAt,
+        updatedAt: repository.updatedAt,
+    };
+};
+
+module.exports = mongoose.model('repository', repositorySchema);

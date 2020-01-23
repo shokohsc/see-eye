@@ -94,7 +94,37 @@ const config = cfg({
       env: 'UPLOAD_PATH',
       type: 'string',
       required: true,
-      default: '/app/upload/',
+      default: '/app/data/upload/',
+  },
+  buildPath: {
+      env: 'BUILD_PATH',
+      type: 'string',
+      required: true,
+      default: '/app/data/build/',
+  },
+  ciFilename: {
+      env: 'CI_FILENAME',
+      type: 'string',
+      required: true,
+      default: 'see-eye.yaml',
+  },
+  apiHost: {
+      env: 'API_HOST',
+      type: 'string',
+      required: true,
+      default: 'localhost',
+  },
+  apiPort: {
+      env: 'API_PORT',
+      type: 'string',
+      required: true,
+      default: '3000',
+  },
+  apiPath: {
+      env: 'API_PATH',
+      type: 'string',
+      required: true,
+      default: '/api/',
   }
 });
 

@@ -12,7 +12,7 @@ const fetchGitBranches = require('../../services/fetchGitBranches');
  *  branch:
  *    type: string
  *    description: Branch name
- *    example: my-branch
+ *    example: master
  *  arrayOfBranches:
  *    type: array
  *    items:
