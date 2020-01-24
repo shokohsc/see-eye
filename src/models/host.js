@@ -42,4 +42,4 @@ hostSchema.methods.serialized = function serialized() {
     };
 };
 
-module.exports = mongoose.model('host', hostSchema);
+module.exports = mongoose.model('Host', hostSchema);

@@ -8,6 +8,7 @@ const config = require('../../../src/config');
 const router = new express.Router();
 const serverError = require('../../services/serverError');
 const Repository = require('../../models/repository');
+const Build = require('../../models/build');
 
 /**
  * @swagger
@@ -27,7 +28,7 @@ const Repository = require('../../models/repository');
  */
 
 router.get('/repository', async (req, res, next) => {
-    const repositories = await Repository.find();
+    const repositories = await Repository.find().populate('builds');
 
     res.status(200);
     res.send(repositories.map(repository => repository.serialized()));
@@ -95,6 +96,8 @@ router.post('/repository', async (req, res, next) => {
     let errors = [];
     let repository = req.body;
     repository.domain = void 0 === req.body.domain ? config.githubPublicServer : req.body.domain;
+    repository.connection = void 0 === req.body.connection ? 'https' : req.body.connection;
+    repository.type = void 0 === req.body.type ? 'git' : req.body.type;
 
     // cancel if repository url has already been registered
     if (0 < (await Repository.find({
@@ -147,7 +150,7 @@ router.post('/repository', async (req, res, next) => {
  */
 
 router.get('/repository/:id', async (req, res, next) => {
-    const repository = await Repository.findOne({_id: req.params.id});
+    const repository = await Repository.findOne({_id: req.params.id}).populate('builds');
 
     if (!repository) {
         res.status(404);
@@ -228,7 +231,7 @@ router.get('/repository/:id', async (req, res, next) => {
 
 router.put('/repository/:id', async (req, res, next) => {
     let errors = [];
-    let repository = await Repository.findOne({_id: req.params.id});
+    let repository = await Repository.findOne({_id: req.params.id}).populate('builds');
 
     if (!repository) {
         res.status(404);
@@ -262,6 +265,9 @@ router.put('/repository/:id', async (req, res, next) => {
             rimraf(config.buildPath+repository.id, (error) => {
                 if (error) serverError(res, error);
             });
+            for (var build of repository.builds) {
+                await Build.deleteOne({_id: build.id });
+            }
         }
     } catch (err) {
         console.log(config.buildPath+repository.id+' does not exists or is not readable');
@@ -272,7 +278,6 @@ router.put('/repository/:id', async (req, res, next) => {
     // validate & write to database
     Object.assign(repository, req.body);
     await repository.validate();
-    repository.builds.remove();
     await repository.save();
 
     res.status(200);
@@ -305,7 +310,7 @@ router.put('/repository/:id', async (req, res, next) => {
  */
 
 router.delete('/repository/:id', async (req, res, next) => {
-    const repository = await Repository.findOne({_id: req.params.id});
+    const repository = await Repository.findOne({_id: req.params.id}).populate('builds');
 
     if (!repository) {
         res.status(404);
@@ -325,7 +330,10 @@ router.delete('/repository/:id', async (req, res, next) => {
         }
     });
 
-    repository.builds.remove();
+    for (var build of repository.builds) {
+        await Build.deleteOne({_id: build.id });
+    }
+
     await Repository.deleteOne({_id: repository.id });
 
     res.status(200);

@@ -33,12 +33,6 @@ const repositorySchema = new mongoose.Schema(
             required: true,
             default: 'master'
         },
-        builds: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'Build',
-            },
-        ],
     },
     {
         toJSON: { virtuals: true, getters: true, versionKey: false },
@@ -52,6 +46,13 @@ repositorySchema.virtual('url').get(function() {
       return 'git@'+this.domain+':'+this.author+'/'+this.repository+'.git';
   }
   return this.connection+'://'+this.domain+'/'+this.author+'/'+this.repository+'.git';
+});
+
+repositorySchema.virtual('builds', {
+    ref: 'Build',
+    localField: '_id',
+    foreignField: 'repositoryId',
+    justOne: false, // set true for one-to-one relationship
 });
 
 repositorySchema.methods.serialized = function serialized() {
@@ -72,4 +73,4 @@ repositorySchema.methods.serialized = function serialized() {
     };
 };
 
-module.exports = mongoose.model('repository', repositorySchema);
+module.exports = mongoose.model('Repository', repositorySchema);

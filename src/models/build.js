@@ -26,9 +26,8 @@ const buildSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        repository: {
+        repositoryId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Repository',
             required: true,
         },
     },
@@ -49,10 +48,10 @@ buildSchema.methods.serialized = function serialized() {
         command: build.command,
         repositoryBranch: build.repositoryBranch,
         repositoryCommit: build.repositoryCommit,
-        repository: build.repository.id,
+        repositoryId: build.repositoryId,
         createdAt: build.createdAt,
         updatedAt: build.updatedAt,
     };
 };
 
-module.exports = mongoose.model('build', buildSchema);
+module.exports = mongoose.model('Build', buildSchema);

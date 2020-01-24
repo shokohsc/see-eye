@@ -56,25 +56,22 @@ const fetchGitBranches = require('../../services/fetchGitBranches');
  *    - name: domain
  *      in: query
  *      required: false
- *      schema:
- *         type: string
- *         default: 'github.com'
+ *      type: string
+ *      default: 'github.com'
  *      description: The git server domain, defaults to 'github.com'
  *    - name: offset
  *      in: query
  *      required: false
- *      schema:
- *         type: integer
- *         minimum: 0
- *         default: 0
+ *      type: integer
+ *      minimum: 0
+ *      default: 0
  *      description: The git server repository release offset, defaults to 0
  *    - name: limit
  *      in: query
  *      required: false
- *      schema:
- *         type: integer
- *         minimum: 0
- *         default: 2
+ *      type: integer
+ *      minimum: 0
+ *      default: 2
  *      description: The git server repository release limit, defaults to 2
  *    produces:
  *      - application/json

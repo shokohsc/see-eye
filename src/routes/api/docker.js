@@ -35,9 +35,8 @@ const fetchDockerTags = require('../../services/fetchDockerTags');
  *    - name: author
  *      in: query
  *      required: false
- *      schema:
- *         type: string
- *         default: 'library'
+ *      type: string
+ *      default: 'library'
  *      description: The docker image author, defaults to 'library'
  *    - name: image
  *      in: query
@@ -47,25 +46,22 @@ const fetchDockerTags = require('../../services/fetchDockerTags');
  *    - name: domain
  *      in: query
  *      required: false
- *      schema:
- *         type: string
- *         default: 'registry.hub.docker.com/v2'
+ *      type: string
+ *      default: 'registry.hub.docker.com/v2'
  *      description: The docker registry domain, defaults to 'registry.hub.docker.com/v2'
  *    - name: offset
  *      in: query
  *      required: false
- *      schema:
- *         type: integer
- *         minimum: 0
- *         default: 0
+ *      type: integer
+ *      minimum: 0
+ *      default: 0
  *      description: The docker registry image tag offset, defaults to 0
  *    - name: limit
  *      in: query
  *      required: false
- *      schema:
- *         type: integer
- *         minimum: 0
- *         default: 2
+ *      type: integer
+ *      minimum: 0
+ *      default: 2
  *      description: The docker registry image tag limit, defaults to 2
  *    produces:
  *      - application/json

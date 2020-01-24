@@ -41,7 +41,7 @@ const Repository = require('../../models/repository');
  */
 
 router.post('/build/:repositoryId', async (req, res, next) => {
-    const repository = await Repository.findOne({_id: req.params.repositoryId});
+    let repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
     if (!repository) {
         res.status(404);
         res.send({
@@ -77,8 +77,8 @@ router.post('/build/:repositoryId', async (req, res, next) => {
         .catch((err) => console.error('failed: ', err));
     }
 
-    let ciConf = {};
     // Read see-eye.yaml if exists
+    let ciConf = {};
     try {
         fs.accessSync(config.buildPath+repository.id+'/'+config.ciFilename, fs.constants.F_OK);
         const file = fs.readFileSync(config.buildPath+repository.id+'/'+config.ciFilename, 'utf8');
@@ -105,8 +105,9 @@ router.post('/build/:repositoryId', async (req, res, next) => {
             'image': tagsConf.image,
             'domain': tagsConf.domain ? tagsConf.domain : void 0,
             // 'offset': tagsConf.offset ? tagsConf.offset : void 0,
+            'offset': repository.builds.length,
             // 'limit': tagsConf.limit ? tagsConf.limit : void 0,
-            'offset': '0',
+            // 'offset': '0',
             'limit': '3',
         },
     })
@@ -122,8 +123,9 @@ router.post('/build/:repositoryId', async (req, res, next) => {
                 'repository': release.repository,
                 'domain': release.domain ? release.domain : void 0,
                 // 'offset': release.offset ? release.offset : void 0,
+                'offset': repository.builds.length,
                 // 'limit': release.limit ? release.limit : void 0,
-                'offset': '0',
+                // 'offset': '0',
                 'limit': '3',
             },
         })
@@ -143,6 +145,48 @@ router.post('/build/:repositoryId', async (req, res, next) => {
 
     // Create docker build commands
     // @TODO this is wrong I need to work on that, mutliple dependency won't work, skipping from tag either
+    // https://www.geeksforgeeks.org/combinations-from-n-arrays-picking-one-element-from-each-array/
+    // Python code:
+    // def print1(arr):
+    //
+    //     # number of arrays
+    //     n = len(arr)
+    //
+    //     # to keep track of next element
+    //     # in each of the n arrays
+    //     indices = [0 for i in range(n)]
+    //
+    //     while (1):
+    //
+    //         # prcurrent combination
+    //         for i in range(n):
+    //             print(arr[i][indices[i]], end = " ")
+    //         print()
+    //
+    //         # find the rightmost array that has more
+    //         # elements left after the current element
+    //         # in that array
+    //         next = n - 1
+    //         while (next >= 0 and
+    //               (indices[next] + 1 >= len(arr[next]))):
+    //             next-=1
+    //
+    //         # no such array is found so no more
+    //         # combinations left
+    //         if (next < 0):
+    //             return
+    //
+    //         # if found move to next element in that
+    //         # array
+    //         indices[next] += 1
+    //
+    //         # for all arrays to the right of this
+    //         # array current index again points to
+    //         # first element
+    //         for i in range(next + 1, n):
+    //             indices[i] = 0
+
+
     let commands = [];
     tags.values.forEach((tag) => {
         const tagArg = '--build-arg '+tagsConf.key+'='+tag;
@@ -158,17 +202,18 @@ router.post('/build/:repositoryId', async (req, res, next) => {
         });
     });
 
-    // commands.forEach((command) => {
-    //     build = new Build({
-    //         command: command,
-    //         repositoryBranch: repository.branchTarget,
-    //         repositoryCommit: commit,
-    //         repository: repository,
-    //     });
-    //     await build.validate();
-    //     await build.save();
-    // });
-
+    // Save builds to database
+    for (const command of commands) {
+        let build = new Build({
+            command: command,
+            repositoryBranch: repository.branchTarget,
+            repositoryCommit: commit,
+            repositoryId: repository._id,
+        });
+        await build.validate();
+        await build.save();
+    }
+    repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
 
     // // Start docker build
     // const dockerHosts = (await Host.find()).map((host) => {
@@ -185,6 +230,8 @@ router.post('/build/:repositoryId', async (req, res, next) => {
     //     });
     // });
 
+    // // How to distribute accross docker hosts, all commands ?
+    // // DEBUG
     // dockerHosts.forEach((host) => {
     //     host.listContainers()
     //     .then(data => {
