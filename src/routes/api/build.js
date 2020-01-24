@@ -131,9 +131,15 @@ router.post('/build/:repositoryId', async (req, res, next) => {
         })
         .then(response => {
             if (response.data.releases) {
+                const releaseArg = {
+                    'key': release.key,
+                    'values': [],
+                    'repository': release.repository
+                };
                 response.data.releases.forEach((tag) => {
-                    releases.push({'key': release.key, 'value': tag, 'repository': release.repository});
+                    releaseArg.values.push(tag);
                 });
+                releases.push(releaseArg);
             }
         });
     }
@@ -147,6 +153,9 @@ router.post('/build/:repositoryId', async (req, res, next) => {
     // @TODO this is wrong I need to work on that, mutliple dependency won't work, skipping from tag either
     // https://www.geeksforgeeks.org/combinations-from-n-arrays-picking-one-element-from-each-array/
     // Python code:
+    console.log(tags);
+    console.log(releases);
+    console.log(fixed);
     // def print1(arr):
     //
     //     # number of arrays
@@ -186,21 +195,20 @@ router.post('/build/:repositoryId', async (req, res, next) => {
     //         for i in range(next + 1, n):
     //             indices[i] = 0
 
-
     let commands = [];
-    tags.values.forEach((tag) => {
-        const tagArg = '--build-arg '+tagsConf.key+'='+tag;
-        const tagTag = tagsConf.image+'-'+tag;
-        releases.forEach((release) => {
-            const releaseArg = '--build-arg '+release.key+'='+release.value;
-            const releaseTag = release.repository+'-'+release.value;
-            fixed.forEach((fix) => {
-                const fixedArg = '--build-arg '+fix.key+'='+fix.value;
-                let command = tagArg+' '+releaseArg+' '+fixedArg+' -t '+repository.author+'/'+repository.repository+':'+tagTag+'-'+releaseTag;
-                commands.push(command+' .');
-            });
-        });
-    });
+    // tags.values.forEach((tag) => {
+    //     const tagArg = '--build-arg '+tagsConf.key+'='+tag;
+    //     const tagTag = tagsConf.image+'-'+tag;
+    //     releases.forEach((release) => {
+    //         const releaseArg = '--build-arg '+release.key+'='+release.value;
+    //         const releaseTag = release.repository+'-'+release.value;
+    //         fixed.forEach((fix) => {
+    //             const fixedArg = '--build-arg '+fix.key+'='+fix.value;
+    //             let command = tagArg+' '+releaseArg+' '+fixedArg+' -t '+repository.author+'/'+repository.repository+':'+tagTag+'-'+releaseTag;
+    //             commands.push(command+' .');
+    //         });
+    //     });
+    // });
 
     // Save builds to database
     for (const command of commands) {
