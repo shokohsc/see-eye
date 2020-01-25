@@ -70,10 +70,10 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
 
     // Save builds to database
     await createRepositoryBuilds(repository, commands);
+    const builds = await Build.find({repositoryId: req.params.repositoryId});
 
-    repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
     res.status(200);
-    res.send(repository.builds.map(build => build.logsLess()));
+    res.send(builds.map(build => build.logsLess()));
 });
 
 /**
@@ -103,14 +103,6 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
 
 router.get('/build/repository/:repositoryId', async (req, res, next) => {
     const builds = await Build.find({repositoryId: req.params.repositoryId});
-
-    if (!builds) {
-        res.status(404);
-        res.send({
-            errors: ['Resource not found'],
-        });
-        throw httpError('404', 'Resource not found');
-    }
 
     res.status(200);
     res.send(builds.map(build => build.logsLess()));
@@ -142,27 +134,17 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
  */
 
 router.put('/build/repository/:repositoryId', async (req, res, next) => {
-    let repository = await Repository.findOne({_id: req.params.repositoryId}).populate({
-        path: 'builds',
-        match: {
-            'state': 'waiting',
-        },
+    const builds = await Build.find({
+        repositoryId: req.params.repositoryId,
+        state: 'waiting',
     });
-    if (!repository) {
-        res.status(404);
-        res.send({
-            errors: ['Resource not found'],
-        });
-        throw httpError('404', 'Resource not found');
-    }
 
     // Start docker builds
     const dockerHosts = await createDockerNodes();
-    await dockerIntegration(dockerHosts, repository.builds);
+    await dockerIntegration(dockerHosts, builds);
 
-    repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
     res.status(200);
-    res.send(repository.builds.map(build => build.logsLess()));
+    res.send(builds.map(build => build.logsLess()));
 });
 
 /**
