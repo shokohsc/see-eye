@@ -52,7 +52,7 @@ const config = cfg({
       env: 'MATTERMOST_CI_USER',
       type: 'string',
       required: true,
-      default: 'sidekick',
+      default: 'see-eye',
   },
   dockerPublicRegistry: {
       env: 'DOCKER_PUBLIC_REGISTRY',
