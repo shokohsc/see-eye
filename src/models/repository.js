@@ -67,7 +67,7 @@ repositorySchema.methods.serialized = function serialized() {
         url: repository.url,
         type: repository.type,
         branchTarget: repository.branchTarget,
-        buildsCount: repository.builds.length,
+        buildsCount: repository.builds ? repository.builds.length : 0,
         createdAt: repository.createdAt,
         updatedAt: repository.updatedAt,
     };

@@ -9,7 +9,7 @@ async function removeFile(source) {
         fs.accessSync(source, fs.constants.F_OK);
         rimraf.sync(source);
     } catch (err) {
-        throw err;
+        console.error(err);
     }
 
 };

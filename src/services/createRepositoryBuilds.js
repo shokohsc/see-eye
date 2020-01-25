@@ -18,7 +18,7 @@ async function createRepositoryBuilds(repository, commands) {
                         'waiting',
                         'running',
                         'success',
-                        'pushed'
+                        'pushed',
                     ],
                 },
             ],

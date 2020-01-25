@@ -71,9 +71,94 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
     // Save builds to database
     await createRepositoryBuilds(repository, commands);
 
-    // Start docker build
+    repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
+    res.status(200);
+    res.send(repository.builds.map(build => build.logsLess()));
+});
+
+/**
+ * @swagger
+ * /build/repository/{repositoryId}:
+ *  get:
+ *    tags:
+ *      - build
+ *    description: List repository builds
+ *    parameters:
+ *    - name: repositoryId
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The repository id
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The build(s) objects without logs
+ *      404:
+ *        description: Resource not found
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.get('/build/repository/:repositoryId', async (req, res, next) => {
+    const builds = await Build.find({repositoryId: req.params.repositoryId});
+
+    if (!builds) {
+        res.status(404);
+        res.send({
+            errors: ['Resource not found'],
+        });
+        throw httpError('404', 'Resource not found');
+    }
+
+    res.status(200);
+    res.send(builds.map(build => build.logsLess()));
+});
+
+/**
+ * @swagger
+ * /build/repository/{repositoryId}:
+ *  put:
+ *    tags:
+ *      - build
+ *    description: Start repository build(s) that are waiting
+ *    parameters:
+ *    - name: repositoryId
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The repository id
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The build(s) objects without logs
+ *      404:
+ *        description: Resource not found
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.put('/build/repository/:repositoryId', async (req, res, next) => {
+    let repository = await Repository.findOne({_id: req.params.repositoryId}).populate({
+        path: 'builds',
+        match: {
+            'state': 'waiting',
+        },
+    });
+    if (!repository) {
+        res.status(404);
+        res.send({
+            errors: ['Resource not found'],
+        });
+        throw httpError('404', 'Resource not found');
+    }
+
+    // Start docker builds
     const dockerHosts = await createDockerNodes();
-    await dockerIntegration(dockerHosts, req.params.repositoryId);
+    await dockerIntegration(dockerHosts, repository.builds);
 
     repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
     res.status(200);
@@ -141,17 +226,11 @@ router.get('/build/queue', async (req, res, next) => {
 
 /**
  * @swagger
- * /build/repository/{repositoryId}:
- *  get:
+ * /build:
+ *  put:
  *    tags:
  *      - build
- *    description: List repository builds
- *    parameters:
- *    - name: repositoryId
- *      in: path
- *      required: true
- *      type: string
- *      description: The repository id
+ *    description: Start build(s) that are waiting
  *    produces:
  *      - application/json
  *    responses:
@@ -164,16 +243,14 @@ router.get('/build/queue', async (req, res, next) => {
  *
  */
 
-router.get('/build/repository/:repositoryId', async (req, res, next) => {
-    const builds = await Build.find({repositoryId: req.params.repositoryId});
+router.put('/build', async (req, res, next) => {
+    let builds = await Build.find({
+        'state': 'waiting',
+    });
 
-    if (!builds) {
-        res.status(404);
-        res.send({
-            errors: ['Resource not found'],
-        });
-        throw httpError('404', 'Resource not found');
-    }
+    // Start docker builds
+    const dockerHosts = await createDockerNodes();
+    await dockerIntegration(dockerHosts, builds);
 
     res.status(200);
     res.send(builds.map(build => build.logsLess()));
@@ -214,6 +291,53 @@ router.get('/build/:id', async (req, res, next) => {
         });
         throw httpError('404', 'Resource not found');
     }
+
+    res.status(200);
+    res.send(build.serialized());
+});
+
+/**
+ * @swagger
+ * /build/{id}:
+ *  put:
+ *    tags:
+ *      - build
+ *    description: Start a build that is waiting
+ *    parameters:
+ *    - name: id
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The build id
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The build serialized object
+ *      404:
+ *        description: Resource not found
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.put('/build/:id', async (req, res, next) => {
+    const build = await Build.findOne({
+        _id: req.params.id,
+        'state': 'waiting',
+    });
+
+    if (!build) {
+        res.status(404);
+        res.send({
+            errors: ['Resource not found'],
+        });
+        throw httpError('404', 'Resource not found');
+    }
+
+    // Start docker build
+    const dockerHosts = await createDockerNodes();
+    await dockerIntegration(dockerHosts, [build]);
 
     res.status(200);
     res.send(build.serialized());

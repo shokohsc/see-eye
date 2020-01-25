@@ -1,15 +1,12 @@
 'use strict'
 
-const Repository = require('../models/repository');
-
 const dockerBuild = require('./dockerBuild');
 const config = require('../../src/config');
 
-async function dockerIntegration(dockerHosts, repositoryId) {
+async function dockerIntegration(dockerHosts, builds) {
 
-    const repository = await Repository.findOne({_id: repositoryId}).populate('builds');
     let index = 0;
-    for (let build of repository.builds) {
+    for (let build of builds) {
         Object.assign(build, {
             'state': 'running',
         });
