@@ -6,7 +6,7 @@ const buildSchema = new mongoose.Schema(
         state: {
             type: String,
             required: true,
-            enum: ['waiting', 'running', 'success', 'failed'],
+            enum: ['waiting', 'running', 'success', 'failed', 'pushed'],
             default: 'waiting',
         },
         logs: {
@@ -16,6 +16,15 @@ const buildSchema = new mongoose.Schema(
         command: {
             type: String,
             required: true,
+        },
+        tag: {
+            type: String,
+            required: true,
+        },
+        buildArgs: {
+            type: Map,
+            of: String,
+            required: false,
         },
         repositoryBranch: {
             type: String,
@@ -46,6 +55,8 @@ buildSchema.methods.serialized = function serialized() {
         state: build.state,
         logs: build.logs,
         command: build.command,
+        tag: build.tag,
+        buildArgs: build.buildArgs,
         repositoryBranch: build.repositoryBranch,
         repositoryCommit: build.repositoryCommit,
         repositoryId: build.repositoryId,

@@ -90,6 +90,27 @@ const config = cfg({
       required: true,
       default: '/var/run/docker.sock',
   },
+  dockerAuthServer: {
+      env: 'DOCKER_AUTH_SERVER',
+      type: 'string',
+      required: true,
+      default: 'https://index.docker.io/v1',
+  },
+  dockerAuthUsername: {
+      env: 'DOCKER_AUTH_USERNAME',
+      type: 'string',
+      required: true,
+  },
+  dockerAuthEmail: {
+      env: 'DOCKER_AUTH_EMAIL',
+      type: 'string',
+      required: true,
+  },
+  dockerAuthPassword: {
+      env: 'DOCKER_AUTH_PASSWORD',
+      type: 'string',
+      required: true,
+  },
   uploadPath: {
       env: 'UPLOAD_PATH',
       type: 'string',

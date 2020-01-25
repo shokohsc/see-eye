@@ -8,6 +8,7 @@ const axios = require('axios');
 const git = require('simple-git/promise');
 const gitRev = require('git-rev-sync');
 const Docker = require('dockerode');
+const tarfs = require('tar-fs');
 const config = require('../../../src/config');
 const router = new express.Router();
 const serverError = require('../../services/serverError');
@@ -96,7 +97,7 @@ router.post('/build/:repositoryId', async (req, res, next) => {
     if (ciConf['build-args'] && ciConf['build-args'].releases) releasesConf = ciConf['build-args'].releases;
     if (ciConf['build-args'] && ciConf['build-args'].fixed) fixedConf = ciConf['build-args'].fixed;
 
-    let tags = {};
+    let tags = [];
     await axios({
         method: 'get',
         url: 'http://'+config.apiHost+':'+config.apiPort+config.apiPath+'docker',
@@ -104,16 +105,25 @@ router.post('/build/:repositoryId', async (req, res, next) => {
             'author': tagsConf.author ? tagsConf.author : void 0,
             'image': tagsConf.image,
             'domain': tagsConf.domain ? tagsConf.domain : void 0,
-            // 'offset': tagsConf.offset ? tagsConf.offset : void 0,
-            'offset': repository.builds.length,
+            'offset': tagsConf.offset ? tagsConf.offset : void 0,
             // 'limit': tagsConf.limit ? tagsConf.limit : void 0,
-            // 'offset': '0',
-            'limit': '3',
+            'limit': '2',
         },
     })
-    .then(response => tags = {'key': tagsConf.key, 'values': response.data.tags, 'image': tagsConf.image});
+    .then(response => {
+        if (response.data && response.data.tags) {
+            response.data.tags.forEach((tag) => {
+                tags.push({
+                    'key': tagsConf.key,
+                    'value': tag,
+                    'image': tagsConf.image,
+                });
+            });
+        }
+    });
 
     let releases = [];
+    let index = 0;
     for (const release of releasesConf) {
         await axios({
             method: 'get',
@@ -122,26 +132,27 @@ router.post('/build/:repositoryId', async (req, res, next) => {
                 'author': release.author ? release.author : void 0,
                 'repository': release.repository,
                 'domain': release.domain ? release.domain : void 0,
-                // 'offset': release.offset ? release.offset : void 0,
-                'offset': repository.builds.length,
+                'offset': release.offset ? release.offset : void 0,
                 // 'limit': release.limit ? release.limit : void 0,
-                // 'offset': '0',
-                'limit': '3',
+                'limit': '2',
             },
         })
         .then(response => {
             if (response.data.releases) {
-                const releaseArg = {
-                    'key': release.key,
-                    'values': [],
-                    'repository': release.repository
-                };
-                response.data.releases.forEach((tag) => {
-                    releaseArg.values.push(tag);
-                });
-                releases.push(releaseArg);
+                if (response.data && response.data.releases) {
+                    releases[index] = [];
+                    response.data.releases.forEach((tag) => {
+                        releases[index].push({
+                            'key': release.key,
+                            'value': tag,
+                            'repository': release.repository,
+                        });
+                    });
+
+                }
             }
         });
+        index++;
     }
 
     let fixed = [];
@@ -150,109 +161,136 @@ router.post('/build/:repositoryId', async (req, res, next) => {
     });
 
     // Create docker build commands
-    // @TODO this is wrong I need to work on that, mutliple dependency won't work, skipping from tag either
-    // https://www.geeksforgeeks.org/combinations-from-n-arrays-picking-one-element-from-each-array/
-    // Python code:
-    console.log(tags);
-    console.log(releases);
-    console.log(fixed);
-    // def print1(arr):
-    //
-    //     # number of arrays
-    //     n = len(arr)
-    //
-    //     # to keep track of next element
-    //     # in each of the n arrays
-    //     indices = [0 for i in range(n)]
-    //
-    //     while (1):
-    //
-    //         # prcurrent combination
-    //         for i in range(n):
-    //             print(arr[i][indices[i]], end = " ")
-    //         print()
-    //
-    //         # find the rightmost array that has more
-    //         # elements left after the current element
-    //         # in that array
-    //         next = n - 1
-    //         while (next >= 0 and
-    //               (indices[next] + 1 >= len(arr[next]))):
-    //             next-=1
-    //
-    //         # no such array is found so no more
-    //         # combinations left
-    //         if (next < 0):
-    //             return
-    //
-    //         # if found move to next element in that
-    //         # array
-    //         indices[next] += 1
-    //
-    //         # for all arrays to the right of this
-    //         # array current index again points to
-    //         # first element
-    //         for i in range(next + 1, n):
-    //             indices[i] = 0
+    function cartesian(arg) {
+        let r = [],
+            max = arg.length-1;
+
+        function helper(arr, i) {
+            for (let j=0, l=arg[i].length; j<l; j++) {
+                let a = arr.slice(0); // clone arr
+                a.push(arg[i][j]);
+                if (i==max)
+                    r.push(a);
+                else
+                    helper(a, i+1);
+            }
+        }
+        helper([], 0);
+        return r;
+    }
 
     let commands = [];
-    // tags.values.forEach((tag) => {
-    //     const tagArg = '--build-arg '+tagsConf.key+'='+tag;
-    //     const tagTag = tagsConf.image+'-'+tag;
-    //     releases.forEach((release) => {
-    //         const releaseArg = '--build-arg '+release.key+'='+release.value;
-    //         const releaseTag = release.repository+'-'+release.value;
-    //         fixed.forEach((fix) => {
-    //             const fixedArg = '--build-arg '+fix.key+'='+fix.value;
-    //             let command = tagArg+' '+releaseArg+' '+fixedArg+' -t '+repository.author+'/'+repository.repository+':'+tagTag+'-'+releaseTag;
-    //             commands.push(command+' .');
-    //         });
-    //     });
-    // });
+    releases.push(tags);
+    const products = cartesian(releases);
+    products.forEach((product) => {
+        let command = '';
+        let buildTag = '-t '+repository.author+'/'+repository.repository+':';
+        let buildTags = [];
+        let buildArgs = {};
+        product.forEach((arg) => {
+            command += '--build-arg '+arg.key+'='+arg.value+' ';
+            buildArgs[arg.key] = arg.value;
+            if (arg.image)
+                buildTags.push(arg.image+'-'+arg.value);
+            if (arg.repository)
+                buildTags.push(arg.repository+'-'+arg.value);
+        });
+        fixed.forEach((fix) => {
+            command += '--build-arg '+fix.key+'='+fix.value+' ';
+            buildArgs[fix.key] = fix.value;
+        });
+        command += buildTag;
+        command += buildTags.join('-');
+        commands.push({
+            'command': command,
+            'args': buildArgs,
+            'tag': repository.author+'/'+repository.repository+':'+buildTags.join('-'),
+        });
+    });
 
     // Save builds to database
     for (const command of commands) {
-        let build = new Build({
-            command: command,
-            repositoryBranch: repository.branchTarget,
-            repositoryCommit: commit,
-            repositoryId: repository._id,
-        });
-        await build.validate();
-        await build.save();
+        const build = await Build.findOne({command: command.command});
+        if (!build) {
+            let build = new Build({
+                command: command.command,
+                tag: command.tag,
+                buildArgs: command.args,
+                repositoryBranch: repository.branchTarget,
+                repositoryCommit: commit,
+                repositoryId: repository._id,
+            });
+            await build.validate();
+            await build.save();
+        }
     }
+
+    // Start docker build
+    const dockerHosts = (await Host.find()).map((host) => {
+        return (host.ca && host.cert && host.key) ? new Docker({
+            protocol: 'https',
+            socketPath: void 0,
+            host: host.url.split(':')[0],
+            port: host.url.split(':')[1],
+            ca: fs.readFileSync(config.uploadPath+host.ca),
+            cert: fs.readFileSync(config.uploadPath+host.cert),
+            key: fs.readFileSync(config.uploadPath+host.key),
+        }): new Docker({
+            socketPath: host.url,
+        });
+    });
+
     repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
+    for (let build of repository.builds) {
+        let index = Math.floor(Math.random() * Math.floor(dockerHosts.length));
+        Object.assign(build, {
+            'state': 'running',
+        });
+        await build.save();
+        const pack = tarfs.pack(config.buildPath+repository.id);
+        await dockerHosts[index]
+        .buildImage(pack, {
+            't': build.tag,
+            'buildargs': build.buildArgs,
+        }, async (err, stream) => {
+            if (null != err) console.error(err);
+            await dockerHosts[index].modem.followProgress(stream, async (err, output) => {
+                Object.assign(build, {
+                    'state': null == err ? 'success' : 'failed',
+                });
+                await build.save();
+            }, (event) => {
+                if (null !== event)
+                    build.logs.push(event.stream);
+            });
+        });
 
-    // // Start docker build
-    // const dockerHosts = (await Host.find()).map((host) => {
-    //     return (host.ca && host.cert && host.key) ? new Docker({
-    //         protocol: 'https',
-    //         socketPath: void 0,
-    //         host: host.url.split(':')[0],
-    //         port: host.url.split(':')[1],
-    //         ca: fs.readFileSync(config.uploadPath+host.ca),
-    //         cert: fs.readFileSync(config.uploadPath+host.cert),
-    //         key: fs.readFileSync(config.uploadPath+host.key),
-    //     }): new Docker({
-    //         socketPath: host.url,
-    //     });
-    // });
+        // Push images
+        const image = await dockerHosts[index].getImage(build.tag);
+        await image.push({
+            authconfig: {
+                auth: '',
+                email: config.dockerAuthEmail,
+                password: config.dockerAuthPassword,
+                serveraddress: config.dockerAuthServer,
+                username: config.dockerAuthUsername,
+            },
+            tag: build.tag.split,
+        }, async (err, stream) => {
+            if (null != err) console.error(err);
+            await dockerHosts[index].modem.followProgress(stream, async (err, output) => {
+                Object.assign(build, {
+                    'state': null == err ? 'pushed' : build.state,
+                });
+                await build.save();
+            }, (event) => {
+                if (null !== event)
+                    build.logs.push(event.stream);
+            });
+        });
+    }
 
-    // // How to distribute accross docker hosts, all commands ?
-    // // DEBUG
-    // dockerHosts.forEach((host) => {
-    //     host.listContainers()
-    //     .then(data => {
-    //         data.forEach((container) => {
-    //             console.log(container.Names[0]);
-    //         });
-    //     })
-    // });
-
-    // Save builds to database
-    // Push images
-    // Hydrate builds property
-
+    repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
     res.status(200);
     res.send(repository.builds.map(build => build.serialized()));
 });

@@ -38,6 +38,7 @@
     "simple-git": "^1.130.0",
     "swagger-jsdoc": "^3.4.0",
     "swagger-ui-express": "^2.0.15",
+    "tar-fs": "^2.0.0",
     "yaml": "^1.7.2"
   },
   "devDependencies": {
