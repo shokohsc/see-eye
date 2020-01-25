@@ -19,6 +19,7 @@ async function getDockerCommands(products, repository, fixed) {
         fixed.forEach((parameter) => {
             command += '--build-arg '+parameter.key+'='+parameter.value+' ';
             buildArgs[parameter.key] = parameter.value;
+            buildTags.push(parameter.tagKey+'-'+parameter.value);
         });
         command += buildTag;
         command += buildTags.join('-');
