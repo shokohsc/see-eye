@@ -1,14 +1,12 @@
 'use strict';
 
 const express = require('express');
-const fs = require('fs');
 const httpError = require('http-errors');
-const rimraf = require('rimraf');
 const config = require('../../../src/config');
 const router = new express.Router();
-const serverError = require('../../services/serverError');
 const Repository = require('../../models/repository');
 const Build = require('../../models/build');
+const removeDirectory = require('../../services/removeDirectory');
 
 /**
  * @swagger
@@ -247,7 +245,9 @@ router.put('/repository/:id', async (req, res, next) => {
         author: req.body.author,
         repository: req.body.repository,
         domain: req.body.domain,
-        id: {$regex: regex},
+        id: {
+            $regex: regex
+        },
     }))) {
         errors.push('this repository has already been registered');
     }
@@ -261,10 +261,7 @@ router.put('/repository/:id', async (req, res, next) => {
     // remove files if url has changed
     try {
         if (repository.author !== req.body.author && repository.repository !== req.body.repository && repository.domain !== req.body.domain) {
-            fs.accessSync(config.buildPath+repository.id, fs.constants.F_OK);
-            rimraf(config.buildPath+repository.id, (error) => {
-                if (error) serverError(res, error);
-            });
+            await removeDirectory(config.buildPath+repository.id);
             for (var build of repository.builds) {
                 await Build.deleteOne({_id: build.id });
             }
@@ -321,14 +318,7 @@ router.delete('/repository/:id', async (req, res, next) => {
     }
 
     // Remove repository directory
-    fs.stat(config.buildPath+repository.id, (err, stats) => {
-        if (err) serverError(res, err);
-        if (void 0 !== stats && stats.isDirectory()) {
-            rimraf(config.buildPath+repository.id, (error) => {
-                if (error) serverError(res, error);
-            });
-        }
-    });
+    await removeDirectory(config.buildPath+repository.id);
 
     for (var build of repository.builds) {
         await Build.deleteOne({_id: build.id });

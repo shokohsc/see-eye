@@ -2,13 +2,14 @@
 
 const express = require('express');
 const multer  = require('multer');
-const fs = require('fs');
 const httpError = require('http-errors');
 const config = require('../../../src/config');
 const upload = multer({ dest: '/tmp/' });
 const router = new express.Router();
-const serverError = require('../../services/serverError');
 const Host = require('../../models/host');
+const accessPath = require('../../services/accessPath');
+const moveFile = require('../../services/moveFile');
+const removeFile = require('../../services/removeFile');
 
 /**
  * @swagger
@@ -90,55 +91,26 @@ router.post('/host', upload.fields([{ name: 'ca' }, { name: 'cert' }, { name: 'k
         errors.push('this docker socket/url has already been registered');
     }
 
-    try {
-        fs.accessSync(config.uploadPath, fs.constants.F_OK);
-    } catch (err) {
-        console.error(err);
-        fs.mkdirSync(config.uploadPath, {'mode': 0o775});
-    }
-
+    await accessPath(config.uploadPath);
     // copy then delete uploaded files from /tmp to config.uploadPath directory
-    if (req.files.ca || req.files.cert || req.files.key) {
-        fs.copyFile(req.files.ca[0].path, config.uploadPath+req.files.ca[0].filename, (err) => {
-            if (err) serverError(res, err);
-        });
-        fs.unlink(req.files.ca[0].path, (err) => {
-            if (err) serverError(res, err);
-        });
-
-        fs.copyFile(req.files.cert[0].path, config.uploadPath+req.files.cert[0].filename, (err) => {
-            if (err) serverError(res, err);
-        });
-        fs.unlink(req.files.cert[0].path, (err) => {
-            if (err) serverError(res, err);
-        });
-
-        fs.copyFile(req.files.key[0].path, config.uploadPath+req.files.key[0].filename, (err) => {
-            if (err) serverError(res, err);
-        });
-        fs.unlink(req.files.key[0].path, (err) => {
-            if (err) serverError(res, err);
-        });
+    if (req.files.ca && req.files.cert && req.files.key) {
+        await moveFile(req.files.ca[0].path, config.uploadPath+req.files.ca[0].filename);
+        await moveFile(req.files.cert[0].path, config.uploadPath+req.files.cert[0].filename);
+        await moveFile(req.files.key[0].path, config.uploadPath+req.files.key[0].filename);
     }
 
     // cancel if there is certificate and key files but no valid url
     const regex = /(?<host>^.+):(?<port>\d+$)/;
-    if (req.files.ca && req.files.cert && req.files.key && !regex.test(url)) {
+    if ((req.files.ca || req.files.cert || req.files.key) && !regex.test(url)) {
         errors.push('url does not match host:port pattern while providing certificates');
     }
 
     // remove files if there is at least an error
     if (0 < errors.length) {
         if (req.files.ca && req.files.cert && req.files.key) {
-            fs.unlink(config.uploadPath+req.files.ca[0].filename, (err) => {
-                if (err) serverError(res, err);
-            });
-            fs.unlink(config.uploadPath+req.files.cert[0].filename, (err) => {
-                if (err) serverError(res, err);
-            });
-            fs.unlink(config.uploadPath+req.files.key[0].filename, (err) => {
-                if (err) serverError(res, err);
-            });
+            await removeFile(config.uploadPath+req.files.ca[0].filename);
+            await removeFile(config.uploadPath+req.files.cert[0].filename);
+            await removeFile(config.uploadPath+req.files.key[0].filename);
         }
 
         res.status(400);
@@ -242,15 +214,9 @@ router.delete('/host/:id', async (req, res, next) => {
     }
 
     if (host.ca && host.cert && host.key) {
-        fs.unlink(config.uploadPath+host.ca, (err) => {
-            if (err) serverError(res, err);
-        });
-        fs.unlink(config.uploadPath+host.cert, (err) => {
-            if (err) serverError(res, err);
-        });
-        fs.unlink(config.uploadPath+host.key, (err) => {
-            if (err) serverError(res, err);
-        });
+        await removeFile(config.uploadPath+host.ca);
+        await removeFile(config.uploadPath+host.cert);
+        await removeFile(config.uploadPath+host.key);
     }
 
     await Host.deleteOne({_id: host.id });

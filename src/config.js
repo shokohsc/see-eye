@@ -60,6 +60,12 @@ const config = cfg({
       required: true,
       default: 'registry.hub.docker.com/v2',
   },
+  dockerPublicRegistryUsername: {
+      env: 'DOCKER_PUBLIC_USERNAME',
+      type: 'string',
+      required: true,
+      default: 'library',
+  },
   githubPublicServer: {
       env: 'GITHUB_PUBLIC_SERVER',
       type: 'string',

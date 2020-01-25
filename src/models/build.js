@@ -65,4 +65,21 @@ buildSchema.methods.serialized = function serialized() {
     };
 };
 
+buildSchema.methods.logsLess = function logsLess() {
+    const build = this.toObject();
+
+    return {
+        id: build.id,
+        state: build.state,
+        command: build.command,
+        tag: build.tag,
+        buildArgs: build.buildArgs,
+        repositoryBranch: build.repositoryBranch,
+        repositoryCommit: build.repositoryCommit,
+        repositoryId: build.repositoryId,
+        createdAt: build.createdAt,
+        updatedAt: build.updatedAt,
+    };
+};
+
 module.exports = mongoose.model('Build', buildSchema);
