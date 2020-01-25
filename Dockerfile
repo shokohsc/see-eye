@@ -8,7 +8,6 @@ ENV PATH /usr/src/app/node_modules/.bin:$PATH
 FROM shokohsc/alpine-node
 
 COPY --from=builder /usr/src/app/node_modules ./node_modules
-COPY ./root/etc/services.d/node-consumer /etc/services.d/node-consumer
 COPY . .
 
 HEALTHCHECK CMD curl --fail http://localhost:3000/api/ || exit 1
