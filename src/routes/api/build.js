@@ -65,8 +65,9 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
 
     // Create docker build commands
     releases.push(tags);
+    releases.push(fixed);
     const products = await cartesianProduct(releases);
-    const commands = await getDockerCommands(products, repository, fixed);
+    const commands = await getDockerCommands(products, repository);
 
     // Save builds to database
     await createRepositoryBuilds(repository, commands);

@@ -12,7 +12,13 @@ async function readFixedParametersFromCiConfiguration(ciConfiguration) {
         }
 
         fixedConf.forEach((parameter) => {
-            fixed.push({'key': parameter.key, 'value': parameter.value, 'tagKey': parameter.tag_key});
+            parameter.values.forEach((value) => {
+                fixed.push({
+                    'key': parameter.key,
+                    'value': value,
+                    'tagKey': parameter.tag_key,
+                });
+            });
         });
 
         return fixed;

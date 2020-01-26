@@ -102,7 +102,7 @@ router.post('/repository', async (req, res, next) => {
         author: repository.author,
         repository: repository.repository,
         domain: repository.domain
-    }))) {
+    })).length) {
         errors.push('this repository has already been registered');
     }
 

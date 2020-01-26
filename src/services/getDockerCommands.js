@@ -1,6 +1,6 @@
 'use strict';
 
-async function getDockerCommands(products, repository, fixed) {
+async function getDockerCommands(products, repository) {
 
     let commands = [];
     products.forEach((product) => {
@@ -15,11 +15,8 @@ async function getDockerCommands(products, repository, fixed) {
                 buildTags.push(arg.image+'-'+arg.value);
             if (arg.repository)
                 buildTags.push(arg.repository+'-'+arg.value);
-        });
-        fixed.forEach((parameter) => {
-            command += '--build-arg '+parameter.key+'='+parameter.value+' ';
-            buildArgs[parameter.key] = parameter.value;
-            buildTags.push(parameter.tagKey+'-'+parameter.value);
+            if (arg.tagKey)
+                buildTags.push(arg.tagKey+'-'+arg.value);
         });
         command += buildTag;
         command += buildTags.join('-');
