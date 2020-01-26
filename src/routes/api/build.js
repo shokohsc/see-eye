@@ -90,6 +90,20 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
  *      required: true
  *      type: string
  *      description: The repository id
+ *    - name: offset
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 0
+ *      description: The repository builds offset, defaults to 0
+ *    - name: limit
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 10
+ *      description: The repository builds limit, defaults to 10
  *    produces:
  *      - application/json
  *    responses:
@@ -103,7 +117,16 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
  */
 
 router.get('/build/repository/:repositoryId', async (req, res, next) => {
-    const builds = await Build.find({repositoryId: req.params.repositoryId});
+    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
+    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
+    const builds = await Build.find({
+        repositoryId: req.params.repositoryId,
+    })
+    .limit(limit)
+    .skip(offset)
+    .sort({
+        createdAt: 'desc'
+    });
 
     res.status(200);
     res.send(builds.map(build => build.logsLess()));
@@ -111,7 +134,7 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
 
 /**
  * @swagger
- * /build/repository/{repositoryId}:
+ * /build/repository/{repositoryId}/start:
  *  put:
  *    tags:
  *      - build
@@ -134,7 +157,7 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
  *
  */
 
-router.put('/build/repository/:repositoryId', async (req, res, next) => {
+router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
     const builds = await Build.find({
         repositoryId: req.params.repositoryId,
         state: 'waiting',
@@ -155,6 +178,21 @@ router.put('/build/repository/:repositoryId', async (req, res, next) => {
  *    tags:
  *      - build
  *    description: List builds
+ *    parameters:
+ *    - name: offset
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 0
+ *      description: The builds offset, defaults to 0
+ *    - name: limit
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 10
+ *      description: The builds limit, defaults to 10
  *    produces:
  *      - application/json
  *    responses:
@@ -166,7 +204,14 @@ router.put('/build/repository/:repositoryId', async (req, res, next) => {
  */
 
 router.get('/build', async (req, res, next) => {
-    const builds = await Build.find();
+    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
+    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
+    const builds = await Build.find()
+    .limit(limit)
+    .skip(offset)
+    .sort({
+        createdAt: 'desc'
+    });
 
     res.status(200);
     res.send(builds.map(build => build.logsLess()));
@@ -178,7 +223,22 @@ router.get('/build', async (req, res, next) => {
  *  get:
  *    tags:
  *      - build
- *    description: List running builds left to at least push
+ *    description: List builds left to at least push
+ *    parameters:
+ *    - name: offset
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 0
+ *      description: The builds left offset, defaults to 0
+ *    - name: limit
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 10
+ *      description: The builds left limit, defaults to 10
  *    produces:
  *      - application/json
  *    responses:
@@ -190,6 +250,8 @@ router.get('/build', async (req, res, next) => {
  */
 
 router.get('/build/queue', async (req, res, next) => {
+    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
+    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
     const builds = await Build.find({
         $or: [
             {
@@ -201,6 +263,11 @@ router.get('/build/queue', async (req, res, next) => {
                 ],
             }
         ],
+    })
+    .limit(limit)
+    .skip(offset)
+    .sort({
+        createdAt: 'desc'
     });
 
     res.status(200);
@@ -209,7 +276,7 @@ router.get('/build/queue', async (req, res, next) => {
 
 /**
  * @swagger
- * /build:
+ * /build/start:
  *  put:
  *    tags:
  *      - build
@@ -226,7 +293,7 @@ router.get('/build/queue', async (req, res, next) => {
  *
  */
 
-router.put('/build', async (req, res, next) => {
+router.put('/build/start', async (req, res, next) => {
     let builds = await Build.find({
         'state': 'waiting',
     });
@@ -281,7 +348,7 @@ router.get('/build/:id', async (req, res, next) => {
 
 /**
  * @swagger
- * /build/{id}:
+ * /build/{id}/start:
  *  put:
  *    tags:
  *      - build
@@ -304,7 +371,7 @@ router.get('/build/:id', async (req, res, next) => {
  *
  */
 
-router.put('/build/:id', async (req, res, next) => {
+router.put('/build/:id/start', async (req, res, next) => {
     const build = await Build.findOne({
         _id: req.params.id,
         'state': 'waiting',

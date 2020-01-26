@@ -15,6 +15,21 @@ const removeDirectory = require('../../services/removeDirectory');
  *    tags:
  *      - repository
  *    description: List all repository
+ *    parameters:
+ *    - name: offset
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 0
+ *      description: The repository offset, defaults to 0
+ *    - name: limit
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 10
+ *      description: The repository limit, defaults to 10
  *    produces:
  *      - application/json
  *    responses:
@@ -26,7 +41,15 @@ const removeDirectory = require('../../services/removeDirectory');
  */
 
 router.get('/repository', async (req, res, next) => {
-    const repositories = await Repository.find().populate('builds');
+    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
+    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
+    const repositories = await Repository.find()
+    .limit(limit)
+    .skip(offset)
+    .sort({
+        createdAt: 'desc'
+    })
+    .populate('builds');
 
     res.status(200);
     res.send(repositories.map(repository => repository.serialized()));
