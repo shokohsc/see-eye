@@ -64,9 +64,16 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
     const fixed = await readFixedParametersFromCiConfiguration(ciConf);
 
     // Create docker build commands
-    releases.push(tags);
-    releases.push(fixed);
-    const products = await cartesianProduct(releases);
+    let tmp = [];
+    tmp.push(tags);
+    releases.forEach((release) => {
+        tmp.push(release);
+    });
+    fixed.forEach((parameter) => {
+        tmp.push(parameter);
+    });
+
+    const products = await cartesianProduct(tmp);
     const commands = await getDockerCommands(products, repository);
 
     // Save builds to database

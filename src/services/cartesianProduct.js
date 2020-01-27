@@ -1,14 +1,14 @@
 'use strict';
 
-async function cartesianProduct(arg) {
+async function cartesianProduct(arrays) {
 
     let r = [],
-        max = arg.length-1;
+        max = arrays.length-1;
 
     function helper(arr, i) {
-        for (let j=0, l=arg[i].length; j<l; j++) {
+        for (let j=0, l=arrays[i].length; j<l; j++) {
             let a = arr.slice(0); // clone arr
-            a.push(arg[i][j]);
+            a.push(arrays[i][j]);
             if (i==max)
                 r.push(a);
             else
