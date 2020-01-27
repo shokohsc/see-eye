@@ -1,37 +1,44 @@
 language: shell
-
+dist: bionic
 os:
   - linux
-  - windows
-  - osx
-
 arch:
   - amd64
-  - arm64
-
 services:
   - docker
-
 env:
   global:
+    - DOCKER_CLI_EXPERIMENTAL=enabled
     - IMAGE_NAME="$DOCKER_USERNAME/see-eye"
+    - ARM_ARCHS="linux/arm64,linux/arm/v7,linux/arm/v6"
+    - X86_ARCHS="linux/amd64,linux/386"
+    - PLATFORMS="$ARM_ARCHS,$X86_ARCHS"
+
+before_install:
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 
 before_script:
+  - echo "$PLATFORMS"
+  - docker version
+  - docker buildx version
+  - docker run --rm --privileged docker/binfmt:66f9012c56a8316f9244ffd7622d7c21c1f6f28d
+  - ls -al /proc/sys/fs/binfmt_misc/
   - docker pull "$IMAGE_NAME" || true
+  - docker buildx create --name my-builder
+  - docker buildx use my-builder
+  - docker buildx ls
 
 script:
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  - docker build --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME" .
+  - docker buildx build --platform="$PLATFORMS" --pull --cache-from "$IMAGE_NAME" --tag "$IMAGE_NAME:latest" --push .
 
 after_script:
   - docker images
+  - docker buildx imagetools inspect "$IMAGE_NAME:latest"
 
-before_deploy:
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  - docker tag "$IMAGE_NAME" "${IMAGE_NAME}:latest"
-
-deploy:
-  provider: script
-  script: docker push "$IMAGE_NAME"
-  on:
-    branch: master
+branches:
+  only:
+    - master

@@ -1,0 +1,6 @@
+build-args:
+    tags:
+        key: FROM_TAG
+        author: library
+        image: alpine
+        limit: 12

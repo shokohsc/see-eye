@@ -1,13 +1,14 @@
 FROM node:alpine as builder
 
-WORKDIR /usr/src/app
+WORKDIR /app
 COPY package*.json ./
 RUN npm install --production --no-optional && npm cache clean --force
-ENV PATH /usr/src/app/node_modules/.bin:$PATH
+ENV PATH /app/node_modules/.bin:$PATH
 
-FROM shokohsc/alpine-node
+ARG FROM_TAG='latest'
+FROM shokohsc/alpine-js:${FROM_TAG:-latest}
 
-COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 
 HEALTHCHECK CMD curl --fail http://localhost:3000/api/ || exit 1
