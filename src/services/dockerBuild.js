@@ -10,6 +10,8 @@ async function dockerBuild(docker, build) {
     await docker.buildImage(pack, {
         't': build.tag,
         'buildargs': build.buildArgs,
+        // // Maybe in the future
+        // 'platform': config.dockerBuildPlatforms.split(',')
     }, async (err, stream) => {
         if (null != err) {
             console.error(err);

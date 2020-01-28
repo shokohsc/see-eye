@@ -117,6 +117,13 @@ const config = cfg({
       type: 'string',
       required: true,
   },
+  // // Maybe in the future
+  // dockerBuildPlatforms: {
+  //     env: 'DOCKER_BUILD_PLATFORMS',
+  //     type: 'string',
+  //     required: true,
+  //     default: 'linux/arm64,linux/arm/v7,linux/arm/v6,linux/amd64,linux/386',
+  // },
   uploadPath: {
       env: 'UPLOAD_PATH',
       type: 'string',
