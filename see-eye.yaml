@@ -1,6 +1,6 @@
 build-args:
     tags:
         key: FROM_TAG
-        author: library
-        image: alpine
+        author: shokohsc
+        image: alpine-js
         limit: 12
