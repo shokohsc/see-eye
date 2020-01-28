@@ -152,6 +152,12 @@ const config = cfg({
       type: 'string',
       required: true,
       default: '/api/',
+  },
+  apiPaginationElements: {
+      env: 'API_PAGINATION_ELEMENTS',
+      type: 'integer',
+      required: true,
+      default: 10,
   }
 });
 

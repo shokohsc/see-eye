@@ -16,20 +16,13 @@ const removeDirectory = require('../../services/removeDirectory');
  *      - repository
  *    description: List all repository
  *    parameters:
- *    - name: offset
+ *    - name: page
  *      in: query
  *      required: false
  *      type: integer
  *      minimum: 0
  *      default: 0
- *      description: The repository offset, defaults to 0
- *    - name: limit
- *      in: query
- *      required: false
- *      type: integer
- *      minimum: 0
- *      default: 10
- *      description: The repository limit, defaults to 10
+ *      description: The repository results page, defaults to 0
  *    produces:
  *      - application/json
  *    responses:
@@ -41,11 +34,10 @@ const removeDirectory = require('../../services/removeDirectory');
  */
 
 router.get('/repository', async (req, res, next) => {
-    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
-    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
+    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
     const repositories = await Repository.find()
-    .limit(limit)
-    .skip(offset)
+    .limit(config.apiPaginationElements)
+    .skip(page * config.apiPaginationElements)
     .sort({
         createdAt: 'desc'
     })

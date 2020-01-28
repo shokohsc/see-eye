@@ -44,7 +44,9 @@ const dockerIntegration = require('../../services/dockerIntegration');
  */
 
 router.post('/build/repository/:repositoryId', async (req, res, next) => {
-    let repository = await Repository.findOne({_id: req.params.repositoryId}).populate('builds');
+    let repository = await Repository.findOne({
+        _id: req.params.repositoryId
+    });
     if (!repository) {
         res.status(404);
         res.send({
@@ -97,40 +99,85 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
  *      required: true
  *      type: string
  *      description: The repository id
- *    - name: offset
+ *    - name: page
  *      in: query
  *      required: false
  *      type: integer
  *      minimum: 0
  *      default: 0
- *      description: The repository builds offset, defaults to 0
- *    - name: limit
- *      in: query
- *      required: false
- *      type: integer
- *      minimum: 0
- *      default: 10
- *      description: The repository builds limit, defaults to 10
+ *      description: The repository builds results page, defaults to 0
  *    produces:
  *      - application/json
  *    responses:
  *      200:
  *        description: The build(s) objects without logs
- *      404:
- *        description: Resource not found
  *      500:
  *        description: Internal server error
  *
  */
 
 router.get('/build/repository/:repositoryId', async (req, res, next) => {
-    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
-    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
+    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
     const builds = await Build.find({
         repositoryId: req.params.repositoryId,
     })
-    .limit(limit)
-    .skip(offset)
+    .limit(config.apiPaginationElements)
+    .skip(page * config.apiPaginationElements)
+    .sort({
+        createdAt: 'desc'
+    });
+
+    res.status(200);
+    res.send(builds.map(build => build.logsLess()));
+});
+
+/**
+ * @swagger
+ * /build/repository/{repositoryId}/queue:
+ *  get:
+ *    tags:
+ *      - build
+ *    description: List repository builds left to at least push
+ *    parameters:
+ *    - name: repositoryId
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The repository id
+ *    - name: page
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 0
+ *      default: 0
+ *      description: The repository builds left results page, defaults to 0
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      200:
+ *        description: The build(s) objects without logs
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.get('/build/repository/:repositoryId/queue', async (req, res, next) => {
+    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const builds = await Build.find({
+        repositoryId: req.params.repositoryId,
+        $or: [
+            {
+                'state': [
+                    'waiting',
+                    'running',
+                    'success',
+                    'failed'
+                ],
+            }
+        ],
+    })
+    .limit(config.apiPaginationElements)
+    .skip(page * config.apiPaginationElements)
     .sort({
         createdAt: 'desc'
     });
@@ -157,8 +204,6 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
  *    responses:
  *      200:
  *        description: The build(s) objects without logs
- *      404:
- *        description: Resource not found
  *      500:
  *        description: Internal server error
  *
@@ -186,20 +231,13 @@ router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
  *      - build
  *    description: List builds
  *    parameters:
- *    - name: offset
+ *    - name: page
  *      in: query
  *      required: false
  *      type: integer
  *      minimum: 0
  *      default: 0
- *      description: The builds offset, defaults to 0
- *    - name: limit
- *      in: query
- *      required: false
- *      type: integer
- *      minimum: 0
- *      default: 10
- *      description: The builds limit, defaults to 10
+ *      description: The builds results page, defaults to 0
  *    produces:
  *      - application/json
  *    responses:
@@ -211,11 +249,10 @@ router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
  */
 
 router.get('/build', async (req, res, next) => {
-    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
-    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
+    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
     const builds = await Build.find()
-    .limit(limit)
-    .skip(offset)
+    .limit(config.apiPaginationElements)
+    .skip(page * config.apiPaginationElements)
     .sort({
         createdAt: 'desc'
     });
@@ -232,20 +269,13 @@ router.get('/build', async (req, res, next) => {
  *      - build
  *    description: List builds left to at least push
  *    parameters:
- *    - name: offset
+ *    - name: page
  *      in: query
  *      required: false
  *      type: integer
  *      minimum: 0
  *      default: 0
- *      description: The builds left offset, defaults to 0
- *    - name: limit
- *      in: query
- *      required: false
- *      type: integer
- *      minimum: 0
- *      default: 10
- *      description: The builds left limit, defaults to 10
+ *      description: The builds left results page, defaults to 0
  *    produces:
  *      - application/json
  *    responses:
@@ -257,8 +287,7 @@ router.get('/build', async (req, res, next) => {
  */
 
 router.get('/build/queue', async (req, res, next) => {
-    const offset = void 0 === req.query.offset ? 0 : parseInt(req.query.offset);
-    const limit = void 0 === req.query.limit ? 10 : parseInt(req.query.limit);
+    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
     const builds = await Build.find({
         $or: [
             {
@@ -271,8 +300,8 @@ router.get('/build/queue', async (req, res, next) => {
             }
         ],
     })
-    .limit(limit)
-    .skip(offset)
+    .limit(config.apiPaginationElements)
+    .skip(page * config.apiPaginationElements)
     .sort({
         createdAt: 'desc'
     });

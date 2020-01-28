@@ -18,7 +18,7 @@ async function dockerBuild(docker, build) {
                 stream,
                 async (error, output) => {
                     // on.end(error, output)
-                    if (null != error) console.error(error);
+                    if (null != error) build.logs.push(error)
                     Object.assign(build, {
                         'state': null == error ? 'success' : 'failed',
                     });
@@ -27,7 +27,8 @@ async function dockerBuild(docker, build) {
                 },
                 (event) => {
                     // on.data(event)
-                    if (null !== event) build.logs.push(event.stream);
+                    if (null !== event && event.stream && "\n" != event.stream && null != event.stream)
+                        build.logs.push(event.stream);
                 }
             );
         }

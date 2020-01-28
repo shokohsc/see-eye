@@ -23,7 +23,7 @@ async function dockerPush(docker, build) {
                 stream,
                 async (error, output) => {
                     // on.end(error, output)
-                    if (null != error) console.error(error);
+                    if (null != error) build.logs.push(error)
                     Object.assign(build, {
                         'state': null == error ? 'pushed' : build.state,
                     });
@@ -31,7 +31,7 @@ async function dockerPush(docker, build) {
                 },
                 (event) => {
                     // on.data(event)
-                    if (null !== event)
+                    if (null !== event && event.stream && "\n" != event.stream && null != event.stream)
                         build.logs.push(event.stream);
                 }
             );
