@@ -170,8 +170,7 @@ router.get('/build/repository/:repositoryId/queue', async (req, res, next) => {
                 'state': [
                     'waiting',
                     'running',
-                    'success',
-                    'failed'
+                    'success'
                 ],
             }
         ],
@@ -294,8 +293,7 @@ router.get('/build/queue', async (req, res, next) => {
                 'state': [
                     'waiting',
                     'running',
-                    'success',
-                    'failed'
+                    'success'
                 ],
             }
         ],
