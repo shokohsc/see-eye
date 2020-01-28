@@ -3,6 +3,7 @@
 const tarfs = require('tar-fs');
 const config = require('../../src/config');
 const dockerPush = require('./dockerPush');
+const sendMatterMostMessage = require('./sendMatterMostMessage');
 
 async function dockerBuild(docker, build) {
 
@@ -25,6 +26,7 @@ async function dockerBuild(docker, build) {
                         'state': null == error ? 'success' : 'failed',
                     });
                     await build.save();
+                    await sendMatterMostMessage(`Built ${build.tag}: ${build.id}`);
                     await dockerPush(docker, build);
                 },
                 (event) => {

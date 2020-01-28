@@ -1,6 +1,7 @@
 'use strict'
 
 const config = require('../../src/config');
+const sendMatterMostMessage = require('./sendMatterMostMessage');
 
 async function dockerPush(docker, build) {
 
@@ -27,6 +28,7 @@ async function dockerPush(docker, build) {
                     Object.assign(build, {
                         'state': null == error ? 'pushed' : build.state,
                     });
+                    await sendMatterMostMessage(`Pushed ${build.tag}: ${build.id}`);
                     await build.save();
                 },
                 (event) => {
