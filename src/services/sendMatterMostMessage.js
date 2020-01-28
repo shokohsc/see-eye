@@ -2,7 +2,6 @@
 
 const config = require('../../src/config');
 const mattermost = require('./mattermost');
-const minecraftLogValidate = require('./minecraftLogValidate');
 
 async function sendMatterMostMessage(message) {
     if (void 0 !== config.mattermostWebhookUrl && '' !== config.mattermostWebhookUrl) {
