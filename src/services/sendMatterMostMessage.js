@@ -8,11 +8,11 @@ async function sendMatterMostMessage(message) {
         try {
             await mattermost.send({
                 text: message,
-                channel: '#'+config.mattermostMinecraftChannel,
-                username: config.mattermostMinecraftUser
+                channel: '#'+config.mattermostCIChannel,
+                username: config.mattermostCIUser
             });
         } catch (err) {
-            console.error('Cannot post to mattermost, msg: ' + msg);
+            console.error('Cannot post to mattermost, msg: ' + message);
             console.error(err);
         }
     }
