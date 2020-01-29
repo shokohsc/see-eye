@@ -23,6 +23,13 @@ const removeDirectory = require('../../services/removeDirectory');
  *      minimum: 0
  *      default: 0
  *      description: The repository results page, defaults to 0
+ *    - name: sort
+ *      in: query
+ *      required: false
+ *      type: string
+ *      default: 'desc'
+ *      enum: ['asc', 'desc']
+ *      description: The repository results order, defaults to 'desc'
  *    produces:
  *      - application/json
  *    responses:
@@ -35,11 +42,12 @@ const removeDirectory = require('../../services/removeDirectory');
 
 router.get('/repository', async (req, res, next) => {
     const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const sort = void 0 === req.query.sort ? 0 : req.query.sort;
     const repositories = await Repository.find()
     .limit(config.apiPaginationElements)
     .skip(page * config.apiPaginationElements)
     .sort({
-        createdAt: 'desc'
+        createdAt: sort
     })
     .populate('builds');
 

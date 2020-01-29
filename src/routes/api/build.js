@@ -106,6 +106,13 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
  *      minimum: 0
  *      default: 0
  *      description: The repository builds results page, defaults to 0
+ *    - name: sort
+ *      in: query
+ *      required: false
+ *      type: string
+ *      default: 'desc'
+ *      enum: ['asc', 'desc']
+ *      description: The repository results order, defaults to 'desc'
  *    produces:
  *      - application/json
  *    responses:
@@ -118,13 +125,14 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
 
 router.get('/build/repository/:repositoryId', async (req, res, next) => {
     const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const sort = void 0 === req.query.sort ? 0 : req.query.sort;
     const builds = await Build.find({
         repositoryId: req.params.repositoryId,
     })
     .limit(config.apiPaginationElements)
     .skip(page * config.apiPaginationElements)
     .sort({
-        createdAt: 'desc'
+        createdAt: sort
     });
 
     res.status(200);
@@ -151,6 +159,13 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
  *      minimum: 0
  *      default: 0
  *      description: The repository builds left results page, defaults to 0
+ *    - name: sort
+ *      in: query
+ *      required: false
+ *      type: string
+ *      default: 'desc'
+ *      enum: ['asc', 'desc']
+ *      description: The repository results order, defaults to 'desc'
  *    produces:
  *      - application/json
  *    responses:
@@ -163,6 +178,7 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
 
 router.get('/build/repository/:repositoryId/queue', async (req, res, next) => {
     const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const sort = void 0 === req.query.sort ? 0 : req.query.sort;
     const builds = await Build.find({
         repositoryId: req.params.repositoryId,
         $or: [
@@ -178,7 +194,7 @@ router.get('/build/repository/:repositoryId/queue', async (req, res, next) => {
     .limit(config.apiPaginationElements)
     .skip(page * config.apiPaginationElements)
     .sort({
-        createdAt: 'desc'
+        createdAt: sort
     });
 
     res.status(200);
@@ -237,6 +253,13 @@ router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
  *      minimum: 0
  *      default: 0
  *      description: The builds results page, defaults to 0
+ *    - name: sort
+ *      in: query
+ *      required: false
+ *      type: string
+ *      default: 'desc'
+ *      enum: ['asc', 'desc']
+ *      description: The repository results order, defaults to 'desc'
  *    produces:
  *      - application/json
  *    responses:
@@ -249,11 +272,12 @@ router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
 
 router.get('/build', async (req, res, next) => {
     const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const sort = void 0 === req.query.sort ? 0 : req.query.sort;
     const builds = await Build.find()
     .limit(config.apiPaginationElements)
     .skip(page * config.apiPaginationElements)
     .sort({
-        createdAt: 'desc'
+        createdAt: sort
     });
 
     res.status(200);
@@ -275,6 +299,13 @@ router.get('/build', async (req, res, next) => {
  *      minimum: 0
  *      default: 0
  *      description: The builds left results page, defaults to 0
+ *    - name: sort
+ *      in: query
+ *      required: false
+ *      type: string
+ *      default: 'desc'
+ *      enum: ['asc', 'desc']
+ *      description: The repository results order, defaults to 'desc'
  *    produces:
  *      - application/json
  *    responses:
@@ -287,6 +318,7 @@ router.get('/build', async (req, res, next) => {
 
 router.get('/build/queue', async (req, res, next) => {
     const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const sort = void 0 === req.query.sort ? 0 : req.query.sort;
     const builds = await Build.find({
         $or: [
             {
@@ -301,7 +333,7 @@ router.get('/build/queue', async (req, res, next) => {
     .limit(config.apiPaginationElements)
     .skip(page * config.apiPaginationElements)
     .sort({
-        createdAt: 'desc'
+        createdAt: sort
     });
 
     res.status(200);
