@@ -258,6 +258,39 @@ router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
 
 /**
  * @swagger
+ * /build/repository/{repositoryId}/reset:
+ *  delete:
+ *    tags:
+ *      - build
+ *    description: Remove repository build(s) that are waiting
+ *    parameters:
+ *    - name: repositoryId
+ *      in: path
+ *      required: true
+ *      type: string
+ *      description: The repository id
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      204:
+ *        description: Empty response
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.delete('/build/repository/:repositoryId/reset', async (req, res, next) => {
+    const builds = await Build.deleteMany({
+        repositoryId: req.params.repositoryId,
+        state: 'waiting',
+    });
+
+    res.status(204);
+    res.send([]);
+});
+
+/**
+ * @swagger
  * /build:
  *  get:
  *    tags:
@@ -388,8 +421,6 @@ router.get('/build/queue', async (req, res, next) => {
  *    responses:
  *      200:
  *        description: The build(s) objects without logs
- *      404:
- *        description: Resource not found
  *      500:
  *        description: Internal server error
  *
@@ -406,6 +437,33 @@ router.put('/build/start', async (req, res, next) => {
 
     res.status(200);
     res.send(builds.map(build => build.logsLess()));
+});
+
+
+/**
+ * @swagger
+ * /build/reset:
+ *  delete:
+ *    tags:
+ *      - build
+ *    description: Remove build(s) that are waiting
+ *    produces:
+ *      - application/json
+ *    responses:
+ *      204:
+ *        description: Empty response
+ *      500:
+ *        description: Internal server error
+ *
+ */
+
+router.delete('/build/reset', async (req, res, next) => {
+    const builds = await Build.deleteMany({
+        state: 'waiting',
+    });
+
+    res.status(204);
+    res.send([]);
 });
 
 /**
