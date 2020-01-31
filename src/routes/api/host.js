@@ -18,6 +18,14 @@ const removeFile = require('../../services/removeFile');
  *    tags:
  *      - host
  *    description: List all docker hosts
+ *    parameters:
+ *    - name: page
+ *      in: query
+ *      required: false
+ *      type: integer
+ *      minimum: 1
+ *      default: 1
+ *      description: The repository results page, defaults to 1
  *    produces:
  *      - application/json
  *    responses:
@@ -29,10 +37,27 @@ const removeFile = require('../../services/removeFile');
  */
 
 router.get('/host', async (req, res, next) => {
-    const hosts = await Host.find();
+    const page = void 0 === req.query.page ? 1 : parseInt(req.query.page);
+    const sort = void 0 === req.query.sort ? 0 : req.query.sort;
+    const results = await Host.paginate(
+        {},
+        {
+            page: page,
+            limit: config.apiPaginationElements,
+            sort: {
+                createdAt: sort,
+            },
+            populate: 'builds',
+        }
+    );
 
     res.status(200);
-    res.send(hosts.map(host => host.serialized()));
+    res.send({
+        results: results.docs.map(repository => repository.serialized()),
+        total: results.totalDocs,
+        prevPage: results.prevPage,
+        nextPage: results.nextPage,
+    });
 });
 
 /**

@@ -1,6 +1,7 @@
 'use strict';
 
 const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 const hostSchema = new mongoose.Schema(
     {
         url: {
@@ -27,6 +28,8 @@ const hostSchema = new mongoose.Schema(
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
+
+hostSchema.plugin(mongoosePaginate);
 
 hostSchema.methods.serialized = function serialized() {
     const host = this.toObject();

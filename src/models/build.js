@@ -1,6 +1,7 @@
 'use strict';
 
 const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 const buildSchema = new mongoose.Schema(
     {
         state: {
@@ -46,6 +47,8 @@ const buildSchema = new mongoose.Schema(
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
+
+buildSchema.plugin(mongoosePaginate);
 
 buildSchema.methods.serialized = function serialized() {
     const build = this.toObject();

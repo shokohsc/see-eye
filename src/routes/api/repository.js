@@ -20,9 +20,9 @@ const removeDirectory = require('../../services/removeDirectory');
  *      in: query
  *      required: false
  *      type: integer
- *      minimum: 0
- *      default: 0
- *      description: The repository results page, defaults to 0
+ *      minimum: 1
+ *      default: 1
+ *      description: The repository results page, defaults to 1
  *    - name: sort
  *      in: query
  *      required: false
@@ -41,18 +41,27 @@ const removeDirectory = require('../../services/removeDirectory');
  */
 
 router.get('/repository', async (req, res, next) => {
-    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const page = void 0 === req.query.page ? 1 : parseInt(req.query.page);
     const sort = void 0 === req.query.sort ? 0 : req.query.sort;
-    const repositories = await Repository.find()
-    .limit(config.apiPaginationElements)
-    .skip(page * config.apiPaginationElements)
-    .sort({
-        createdAt: sort
-    })
-    .populate('builds');
+    const results = await Repository.paginate(
+        {},
+        {
+            page: page,
+            limit: config.apiPaginationElements,
+            sort: {
+                createdAt: sort,
+            },
+            populate: 'builds',
+        }
+    );
 
     res.status(200);
-    res.send(repositories.map(repository => repository.serialized()));
+    res.send({
+        results: results.docs.map(repository => repository.serialized()),
+        total: results.totalDocs,
+        prevPage: results.prevPage,
+        nextPage: results.nextPage,
+    });
 });
 
 /**

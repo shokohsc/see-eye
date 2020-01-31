@@ -103,9 +103,9 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
  *      in: query
  *      required: false
  *      type: integer
- *      minimum: 0
- *      default: 0
- *      description: The repository builds results page, defaults to 0
+ *      minimum: 1
+ *      default: 1
+ *      description: The repository builds results page, defaults to 1
  *    - name: sort
  *      in: query
  *      required: false
@@ -124,19 +124,28 @@ router.post('/build/repository/:repositoryId', async (req, res, next) => {
  */
 
 router.get('/build/repository/:repositoryId', async (req, res, next) => {
-    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const page = void 0 === req.query.page ? 1 : parseInt(req.query.page);
     const sort = void 0 === req.query.sort ? 0 : req.query.sort;
-    const builds = await Build.find({
-        repositoryId: req.params.repositoryId,
-    })
-    .limit(config.apiPaginationElements)
-    .skip(page * config.apiPaginationElements)
-    .sort({
-        createdAt: sort
-    });
+    const results = await Build.paginate(
+        {
+            repositoryId: req.params.repositoryId,
+        },
+        {
+            page: page,
+            limit: config.apiPaginationElements,
+            sort: {
+                createdAt: sort,
+            },
+        }
+    );
 
     res.status(200);
-    res.send(builds.map(build => build.logsLess()));
+    res.send({
+        results: results.docs.map(build => build.logsLess()),
+        total: results.totalDocs,
+        prevPage: results.prevPage,
+        nextPage: results.nextPage,
+    });
 });
 
 /**
@@ -156,9 +165,9 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
  *      in: query
  *      required: false
  *      type: integer
- *      minimum: 0
- *      default: 0
- *      description: The repository builds left results page, defaults to 0
+ *      minimum: 1
+ *      default: 1
+ *      description: The repository builds left results page, defaults to 1
  *    - name: sort
  *      in: query
  *      required: false
@@ -177,28 +186,37 @@ router.get('/build/repository/:repositoryId', async (req, res, next) => {
  */
 
 router.get('/build/repository/:repositoryId/queue', async (req, res, next) => {
-    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const page = void 0 === req.query.page ? 1 : parseInt(req.query.page);
     const sort = void 0 === req.query.sort ? 0 : req.query.sort;
-    const builds = await Build.find({
-        repositoryId: req.params.repositoryId,
-        $or: [
-            {
-                'state': [
-                    'waiting',
-                    'running',
-                    'success'
-                ],
-            }
-        ],
-    })
-    .limit(config.apiPaginationElements)
-    .skip(page * config.apiPaginationElements)
-    .sort({
-        createdAt: sort
-    });
+    const results = await Build.paginate(
+        {
+            repositoryId: req.params.repositoryId,
+            $or: [
+                {
+                    'state': [
+                        'waiting',
+                        'running',
+                        'success'
+                    ],
+                }
+            ],
+        },
+        {
+            page: page,
+            limit: config.apiPaginationElements,
+            sort: {
+                createdAt: sort,
+            },
+        }
+    );
 
     res.status(200);
-    res.send(builds.map(build => build.logsLess()));
+    res.send({
+        results: results.docs.map(build => build.logsLess()),
+        total: results.totalDocs,
+        prevPage: results.prevPage,
+        nextPage: results.nextPage,
+    });
 });
 
 /**
@@ -250,9 +268,9 @@ router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
  *      in: query
  *      required: false
  *      type: integer
- *      minimum: 0
- *      default: 0
- *      description: The builds results page, defaults to 0
+ *      minimum: 1
+ *      default: 1
+ *      description: The builds results page, defaults to 1
  *    - name: sort
  *      in: query
  *      required: false
@@ -271,17 +289,26 @@ router.put('/build/repository/:repositoryId/start', async (req, res, next) => {
  */
 
 router.get('/build', async (req, res, next) => {
-    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const page = void 0 === req.query.page ? 1 : parseInt(req.query.page);
     const sort = void 0 === req.query.sort ? 0 : req.query.sort;
-    const builds = await Build.find()
-    .limit(config.apiPaginationElements)
-    .skip(page * config.apiPaginationElements)
-    .sort({
-        createdAt: sort
-    });
+    const results = await Build.paginate(
+        {},
+        {
+            page: page,
+            limit: config.apiPaginationElements,
+            sort: {
+                createdAt: sort,
+            },
+        }
+    );
 
     res.status(200);
-    res.send(builds.map(build => build.logsLess()));
+    res.send({
+        results: results.docs.map(build => build.logsLess()),
+        total: results.totalDocs,
+        prevPage: results.prevPage,
+        nextPage: results.nextPage,
+    });
 });
 
 /**
@@ -296,9 +323,9 @@ router.get('/build', async (req, res, next) => {
  *      in: query
  *      required: false
  *      type: integer
- *      minimum: 0
- *      default: 0
- *      description: The builds left results page, defaults to 0
+ *      minimum: 1
+ *      default: 1
+ *      description: The builds left results page, defaults to 1
  *    - name: sort
  *      in: query
  *      required: false
@@ -317,27 +344,36 @@ router.get('/build', async (req, res, next) => {
  */
 
 router.get('/build/queue', async (req, res, next) => {
-    const page = void 0 === req.query.page ? 0 : parseInt(req.query.page);
+    const page = void 0 === req.query.page ? 1 : parseInt(req.query.page);
     const sort = void 0 === req.query.sort ? 0 : req.query.sort;
-    const builds = await Build.find({
-        $or: [
-            {
-                'state': [
-                    'waiting',
-                    'running',
-                    'success'
-                ],
-            }
-        ],
-    })
-    .limit(config.apiPaginationElements)
-    .skip(page * config.apiPaginationElements)
-    .sort({
-        createdAt: sort
-    });
+    const results = await Build.paginate(
+        {
+            $or: [
+                {
+                    'state': [
+                        'waiting',
+                        'running',
+                        'success'
+                    ],
+                }
+            ],
+        },
+        {
+            page: page,
+            limit: config.apiPaginationElements,
+            sort: {
+                createdAt: sort,
+            },
+        }
+    );
 
     res.status(200);
-    res.send(builds.map(build => build.logsLess()));
+    res.send({
+        results: results.docs.map(build => build.logsLess()),
+        total: results.totalDocs,
+        prevPage: results.prevPage,
+        nextPage: results.nextPage,
+    });
 });
 
 /**

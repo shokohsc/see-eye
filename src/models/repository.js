@@ -1,6 +1,7 @@
 'use strict';
 
 const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 const repositorySchema = new mongoose.Schema(
     {
         author: {
@@ -40,6 +41,8 @@ const repositorySchema = new mongoose.Schema(
         timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
     },
 );
+
+repositorySchema.plugin(mongoosePaginate);
 
 repositorySchema.virtual('url').get(function() {
   if ('ssl' === this.connection) {
